@@ -45,3 +45,23 @@ Tool-Using Agent
 Multi-Agent System
         ↓
 Production Deployment
+```
+## Application History
+
+CreditLens stores evaluated credit applications in a SQLite database.
+
+The repository layer provides:
+
+- `save_credit_application()`
+- `get_credit_application()`
+- `list_credit_applications()`
+
+### Example
+
+```python
+from app.db.repository import get_credit_application
+
+application = get_credit_application(1)
+
+print(application)
+

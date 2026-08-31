@@ -1,0 +1,46 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="fastapi" />
+          <option value="uvicorn" />
+          <option value="python-dotenv" />
+          <option value="requests" />
+          <option value="streamlit" />
+          <option value="numpy" />
+          <option value="pytz" />
+          <option value="nest-asyncio" />
+          <option value="google-generativeai" />
+          <option value="langchain-google-genai" />
+          <option value="qdrant-client" />
+          <option value="flashrank" />
+          <option value="langchain" />
+          <option value="langgraph" />
+          <option value="langchain-groq" />
+          <option value="langchain-google-vertexai" />
+          <option value="langchain-community" />
+          <option value="langchain-openai" />
+          <option value="pydantic" />
+          <option value="unstructured" />
+          <option value="python-pptx" />
+          <option value="python-docx" />
+          <option value="pypdf" />
+          <option value="beautifulsoup4" />
+          <option value="pdfplumber" />
+          <option value="langsmith" />
+          <option value="logfire" />
+          <option value="loguru" />
+          <option value="nemoguardrails" />
+          <option value="langchain-nvidia-ai-endpoints" />
+          <option value="portkey-ai" />
+          <option value="ragas" />
+          <option value="deepeval" />
+          <option value="langfuse" />
+          <option value="sentence-transformers" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
