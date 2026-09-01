@@ -40,3 +40,23 @@ def classify_risk(
         "risk_level": "LOW",
         "reasons": ["Applicant passes basic financial rules"],
     }
+
+
+def combine_risk_assessment(
+    rule_risk_level,
+    default_probability,
+):
+    """
+    Combine deterministic rule-based risk
+    with ML default probability.
+    """
+
+    if default_probability >= 0.70:
+        return "HIGH"
+
+    if default_probability >= 0.40:
+        if rule_risk_level == "LOW":
+            return "MEDIUM"
+        return rule_risk_level
+
+    return rule_risk_level

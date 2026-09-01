@@ -35,6 +35,10 @@ def create_test_database(database_path):
             loan_amount REAL NOT NULL,
             annual_interest_rate REAL NOT NULL,
             tenure_years INTEGER NOT NULL,
+            
+            credit_score REAL,
+            employment_years REAL,
+            previous_defaults INTEGER,
 
             foir REAL NOT NULL,
             emi REAL NOT NULL,
@@ -42,6 +46,10 @@ def create_test_database(database_path):
             remaining_income REAL NOT NULL,
 
             risk_level TEXT NOT NULL,
+
+            default_probability REAL,
+            ml_explanation TEXT,
+            analyst_explanation TEXT,
 
             decision TEXT,
             decision_reason TEXT

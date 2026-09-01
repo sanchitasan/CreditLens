@@ -1,4 +1,5 @@
 from typing import Optional
+import json
 
 from app.db.database import get_connection
 
@@ -11,6 +12,7 @@ from app.services.decision import (
 
 def save_credit_application(
     profile: FinancialProfile,
+
     result,
     lending_decision: LendingDecision,
     connection=None,
@@ -21,6 +23,7 @@ def save_credit_application(
     Stores:
     - applicant financial information
     - credit assessment
+    - ML prediction and explanation
     - lending decision
     """
 
@@ -40,18 +43,28 @@ def save_credit_application(
             annual_interest_rate,
             tenure_years,
 
+            credit_score,
+            employment_years,
+            previous_defaults,
+
             foir,
             emi,
             total_obligations,
             remaining_income,
             risk_level,
 
+            default_probability,
+            ml_explanation,
+            analyst_explanation,
+
             decision,
             decision_reason
         )
         VALUES (
             ?, ?, ?, ?, ?,
+            ?, ?, ?,
             ?, ?, ?, ?, ?,
+            ?, ?, ?,
             ?, ?
         )
         """,
@@ -62,11 +75,19 @@ def save_credit_application(
             profile.annual_interest_rate,
             profile.tenure_years,
 
+            profile.credit_score,
+            profile.employment_years,
+            profile.previous_defaults,
+
             result.foir,
             result.emi,
             result.total_obligations,
             result.remaining_income,
             result.risk_level,
+
+            result.default_probability,
+            json.dumps(result.ml_explanation),
+            result.analyst_explanation,
 
             lending_decision.decision,
             lending_decision.reason,
@@ -111,11 +132,19 @@ def get_credit_application(
             annual_interest_rate,
             tenure_years,
 
+            credit_score,
+            employment_years,
+            previous_defaults,
+
             foir,
             emi,
             total_obligations,
             remaining_income,
             risk_level,
+
+            default_probability,
+            ml_explanation,
+            analyst_explanation,
 
             decision,
             decision_reason
@@ -133,10 +162,18 @@ def get_credit_application(
         connection.close()
 
     if row is None:
-
         return None
 
-    return dict(row)
+    application = dict(row)
+
+    if application["ml_explanation"]:
+        application["ml_explanation"] = json.loads(
+            application["ml_explanation"]
+        )
+    else:
+        application["ml_explanation"] = []
+
+    return application
 
 
 def list_credit_applications(
@@ -208,6 +245,14 @@ def list_credit_applications(
         dict(zip(columns, row))
         for row in rows
     ]
+
+    for application in applications:
+        if application["ml_explanation"]:
+            application["ml_explanation"] = json.loads(
+                application["ml_explanation"]
+            )
+        else:
+            application["ml_explanation"] = []
 
     if close_connection:
         connection.close()

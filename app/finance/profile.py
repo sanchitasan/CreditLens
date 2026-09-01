@@ -8,6 +8,10 @@ class FinancialProfile:
     annual_interest_rate: float
     tenure_years: int
 
+    credit_score: float = 650.0
+    employment_years: float = 1.0
+    previous_defaults: int = 0
+
     def validate(self):
         if self.monthly_income <= 0:
             raise ValueError("Monthly income must be greater than zero.")
@@ -23,3 +27,11 @@ class FinancialProfile:
 
         if self.tenure_years <= 0:
             raise ValueError("Tenure must be greater than zero.")
+        if not 300 <= self.credit_score <= 900:
+            raise ValueError("Credit score must be between 300 and 900.")
+
+        if self.employment_years < 0:
+            raise ValueError("Employment years cannot be negative.")
+
+        if self.previous_defaults < 0:
+            raise ValueError("Previous defaults cannot be negative.")

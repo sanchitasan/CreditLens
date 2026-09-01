@@ -10,13 +10,16 @@ class CreditDecision:
     remaining_income: float
     risk_level: str
     risk_reasons: list[str]
+    default_probability: float = 0.0
+    ml_explanation: list[dict] = None
+    analyst_explanation: str | None = None
 
 @dataclass
 class LendingDecision:
     decision: str
     reason: str
 
-def make_credit_decision(risk_level: str) -> LendingDecision:
+def make_credit_decision(risk_level: str,default_probability=0.0, ml_explanation=None) -> LendingDecision:
 
     if risk_level == "LOW":
         return LendingDecision(

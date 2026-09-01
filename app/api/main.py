@@ -71,13 +71,15 @@ def create_application(
     application: LoanApplicationRequest,
     connection=Depends(get_db_connection),
 ):
-
     profile = FinancialProfile(
         monthly_income=application.monthly_income,
         existing_obligations=application.existing_obligations,
         loan_amount=application.loan_amount,
         annual_interest_rate=application.annual_interest_rate,
         tenure_years=application.tenure_years,
+        credit_score=application.credit_score,
+        employment_years=application.employment_years,
+        previous_defaults=application.previous_defaults,
     )
 
     (
@@ -98,6 +100,9 @@ def create_application(
             "total_obligations": assessment.total_obligations,
             "remaining_income": assessment.remaining_income,
             "risk_level": assessment.risk_level,
+            "default_probability": assessment.default_probability,
+            "ml_explanation": assessment.ml_explanation,
+            "analyst_explanation": assessment.analyst_explanation,
         },
 
         "lending_decision": {
@@ -129,19 +134,29 @@ def get_application(
 
     return LoanApplicationResponse(
         application_id=application["id"],
+
         monthly_income=application["monthly_income"],
         existing_obligations=application["existing_obligations"],
         loan_amount=application["loan_amount"],
         annual_interest_rate=application["annual_interest_rate"],
         tenure_years=application["tenure_years"],
+
+        credit_score=application["credit_score"],
+        employment_years=application["employment_years"],
+        previous_defaults=application["previous_defaults"],
+
         foir=application["foir"],
         emi=application["emi"],
         total_obligations=application["total_obligations"],
         remaining_income=application["remaining_income"],
         risk_level=application["risk_level"],
+
+        default_probability=application["default_probability"],
+        ml_explanation=application["ml_explanation"],
+        analyst_explanation=application["analyst_explanation"],
+
         decision=application["decision"],
         decision_reason=application["decision_reason"],
-
     )
 
 
@@ -184,16 +199,27 @@ def get_applications(
     return [
         LoanApplicationResponse(
             application_id=application["id"],
+
             monthly_income=application["monthly_income"],
             existing_obligations=application["existing_obligations"],
             loan_amount=application["loan_amount"],
             annual_interest_rate=application["annual_interest_rate"],
             tenure_years=application["tenure_years"],
+
+            credit_score=application["credit_score"],
+            employment_years=application["employment_years"],
+            previous_defaults=application["previous_defaults"],
+
             foir=application["foir"],
             emi=application["emi"],
             total_obligations=application["total_obligations"],
             remaining_income=application["remaining_income"],
             risk_level=application["risk_level"],
+
+            default_probability=application["default_probability"],
+            ml_explanation=application["ml_explanation"],
+            analyst_explanation=application["analyst_explanation"],
+
             decision=application["decision"],
             decision_reason=application["decision_reason"],
         )

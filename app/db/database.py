@@ -41,7 +41,11 @@ def initialize_database():
             existing_obligations REAL NOT NULL,
             loan_amount REAL NOT NULL,
             annual_interest_rate REAL NOT NULL,
-            tenure_years INTEGER NOT NULL,
+            tenure_years REAL NOT NULL,
+
+            credit_score REAL,
+            employment_years REAL,
+            previous_defaults INTEGER,
 
             foir REAL NOT NULL,
             emi REAL NOT NULL,
@@ -49,6 +53,10 @@ def initialize_database():
             remaining_income REAL NOT NULL,
 
             risk_level TEXT NOT NULL,
+
+            default_probability REAL,
+            ml_explanation TEXT,
+            analyst_explanation TEXT,
 
             decision TEXT,
             decision_reason TEXT
@@ -68,6 +76,66 @@ def initialize_database():
         for row in cursor.fetchall()
     }
 
+    # Migration: add credit score.
+    if "credit_score" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN credit_score REAL
+            """
+        )
+
+    # Migration: add employment years.
+    if "employment_years" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN employment_years REAL
+            """
+        )
+
+    # Migration: add previous defaults.
+    if "previous_defaults" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN previous_defaults INTEGER
+            """
+        )
+
+    # Migration: add ML default probability.
+    if "default_probability" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN default_probability REAL
+            """
+        )
+
+    # Migration: add ML explanation.
+    if "ml_explanation" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN ml_explanation TEXT
+            """
+        )
+
+    # Migration: add Gemini analyst explanation.
+    if "analyst_explanation" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN analyst_explanation TEXT
+            """
+        )
+
     # Migration: add decision column if necessary.
     if "decision" not in columns:
 
@@ -78,7 +146,7 @@ def initialize_database():
             """
         )
 
-    # Migration: add decision_reason column if necessary.
+    # Migration: add decision reason column if necessary.
     if "decision_reason" not in columns:
 
         cursor.execute(

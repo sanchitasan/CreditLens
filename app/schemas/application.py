@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 
-
 class LoanApplicationRequest(BaseModel):
 
     monthly_income: float = Field(
@@ -30,78 +29,87 @@ class LoanApplicationRequest(BaseModel):
         description="Loan tenure in years",
     )
 
+    # ML features
+    credit_score: float = Field(
+        default=650.0,
+        ge=300,
+        le=900,
+        description="Applicant's credit score",
+    )
+
+    employment_years: float = Field(
+        default=1.0,
+        ge=0,
+        description="Years of employment",
+    )
+
+    previous_defaults: int = Field(
+        default=0,
+        ge=0,
+        description="Number of previous loan defaults",
+    )
+
 
 class CreditAssessmentResponse(BaseModel):
+
     foir: float
     emi: float
     total_obligations: float
     remaining_income: float
     risk_level: str
 
+    # ML prediction
+    default_probability: float
+    ml_explanation: list[dict] = Field(default_factory=list)
+
+
 
 class LendingDecisionResponse(BaseModel):
+
     decision: str
     reason: str
 
 
 class LoanApplicationCreateResponse(BaseModel):
+
     application_id: int
+
     credit_assessment: CreditAssessmentResponse
+
     lending_decision: LendingDecisionResponse
+
+    analyst_explanation: str | None = None
 
 
 class LoanApplicationResponse(BaseModel):
+
     application_id: int
 
+    # Applicant financial information
     monthly_income: float
     existing_obligations: float
     loan_amount: float
     annual_interest_rate: float
     tenure_years: float
 
+    # ML input features
+    # Optional because older database records may not contain them.
+    credit_score: float | None = None
+    employment_years: float | None = None
+    previous_defaults: int | None = None
+
+    # Credit assessment
     foir: float
     emi: float
     total_obligations: float
     remaining_income: float
     risk_level: str
 
-    decision: str | None = None
-    decision_reason: str | None = None
+    # ML output
+    default_probability: float | None = None
+    ml_explanation: list[dict] = Field(default_factory=list)
+    analyst_explanation: str | None = None
 
-
-class CreditAssessmentResponse(BaseModel):
-    foir: float
-    emi: float
-    total_obligations: float
-    remaining_income: float
-    risk_level: str
-
-
-class LendingDecisionResponse(BaseModel):
-    decision: str
-    reason: str
-
-
-class LoanApplicationCreateResponse(BaseModel):
-    application_id: int
-    credit_assessment: CreditAssessmentResponse
-    lending_decision: LendingDecisionResponse
-
-
-class LoanApplicationResponse(BaseModel):
-    application_id: int
-
-    monthly_income: float
-    existing_obligations: float
-    loan_amount: float
-    annual_interest_rate: float
-    tenure_years: float
-
-    foir: float
-    emi: float
-    total_obligations: float
-    remaining_income: float
-    risk_level: str
-
+    # Lending decision
     decision: str | None = None
     decision_reason: str | None = None

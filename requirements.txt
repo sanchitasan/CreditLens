@@ -2,3 +2,15 @@ pytest
 
 fastapi
 uvicorn
+
+pandas
+numpy
+matplotlib
+scikit-learn
+fastapi
+uvicorn
+pytest
+joblib
+
+google-genai
+python-dotenv

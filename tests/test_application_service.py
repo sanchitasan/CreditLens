@@ -5,7 +5,19 @@ from app.services.application_service import (
 )
 
 
-def test_process_credit_application():
+def test_process_credit_application(monkeypatch):
+    class FakeCreditAnalyst:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def analyze(self, assessment):
+            return "Applicant has low credit risk."
+
+    monkeypatch.setattr(
+        "app.services.application_service.CreditAnalyst",
+        FakeCreditAnalyst,
+    )
 
     profile = FinancialProfile(
         monthly_income=80000,

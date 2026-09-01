@@ -9,7 +9,13 @@ from app.services.exceptions import (
 
 client = TestClient(app)
 
+class FakeCreditAnalyst:
 
+    def __init__(self, client):
+        pass
+
+    def analyze(self, analyst_input):
+        return "Fake analyst explanation for testing."
 
 def test_list_applications():
 
@@ -34,7 +40,11 @@ def test_get_nonexistent_application():
         "detail": "Credit application not found"
     }
 
-def test_create_application():
+def test_create_application(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.application_service.CreditAnalyst",
+        FakeCreditAnalyst,
+    )
 
     payload = {
         "monthly_income": 80000,
@@ -42,6 +52,9 @@ def test_create_application():
         "loan_amount": 500000,
         "annual_interest_rate": 12,
         "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
     }
 
     response = client.post(
