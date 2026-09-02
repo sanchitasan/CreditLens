@@ -1,6 +1,6 @@
 import httpx
 
-from streamlit_app.api_client import CreditLensAPIClient
+from ui_app.api_client import CreditLensAPIClient
 
 
 class FakeResponse:
