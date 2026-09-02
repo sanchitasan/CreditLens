@@ -1,16 +1,43 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    PointStruct,
+)
+
+from app.config.settings import settings
 
 
 class QdrantVectorStore:
 
     def __init__(
         self,
-        path="data/qdrant",
-        collection_name="credit_policy",
-        vector_size=384,
+        path=None,
+        collection_name=None,
+        vector_size=None,
     ):
-        self.client = QdrantClient(path=path)
+        path = (
+            path
+            if path is not None
+            else settings.qdrant_path
+        )
+
+        collection_name = (
+            collection_name
+            if collection_name is not None
+            else settings.qdrant_collection
+        )
+
+        vector_size = (
+            vector_size
+            if vector_size is not None
+            else settings.qdrant_vector_size
+        )
+
+        self.client = QdrantClient(
+            path=str(path)
+        )
+
         self.collection_name = collection_name
         self.vector_size = vector_size
 
@@ -57,9 +84,9 @@ class QdrantVectorStore:
         )
 
     def search(
-            self,
-            query_vector,
-            limit=3,
+        self,
+        query_vector,
+        limit=3,
     ):
         results = self.client.query_points(
             collection_name=self.collection_name,

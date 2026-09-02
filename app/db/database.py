@@ -1,12 +1,9 @@
 import sqlite3
-from pathlib import Path
+from app.config.settings import settings
 
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-
-DATA_DIR = BASE_DIR / "data"
-
-DB_PATH = DATA_DIR / "creditlens.db"
+DB_PATH = settings.database_path
+DATA_DIR = DB_PATH.parent
 
 
 def get_connection():

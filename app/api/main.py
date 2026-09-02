@@ -55,6 +55,22 @@ async def credit_application_error_handler(
         },
     )
 
+@app.exception_handler(Exception)
+async def unexpected_error_handler(
+    request: Request,
+    exc: Exception,
+):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": (
+                "An unexpected error occurred "
+                "while processing the request."
+            ),
+        },
+    )
+
 
 @app.get("/")
 def root():

@@ -59,7 +59,6 @@ def deserialize_ml_explanation(value):
 
 def save_credit_application(
     profile: FinancialProfile,
-
     result,
     lending_decision: LendingDecision,
     decision_trace=None,
@@ -73,86 +72,95 @@ def save_credit_application(
     - credit assessment
     - ML prediction and explanation
     - lending decision
+
+    The database transaction is committed only when
+    the complete insert succeeds. If the insert fails,
+    the transaction is rolled back.
     """
 
     owns_connection = connection is None
 
-
     if connection is None:
         connection = get_connection()
 
-    cursor = connection.cursor()
+    try:
+        cursor = connection.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO credit_applications (
-            monthly_income,
-            existing_obligations,
-            loan_amount,
-            annual_interest_rate,
-            tenure_years,
+        cursor.execute(
+            """
+            INSERT INTO credit_applications (
+                monthly_income,
+                existing_obligations,
+                loan_amount,
+                annual_interest_rate,
+                tenure_years,
 
-            credit_score,
-            employment_years,
-            previous_defaults,
+                credit_score,
+                employment_years,
+                previous_defaults,
 
-            foir,
-            emi,
-            total_obligations,
-            remaining_income,
-            risk_level,
+                foir,
+                emi,
+                total_obligations,
+                remaining_income,
+                risk_level,
 
-            default_probability,
-            ml_explanation,
-            analyst_explanation,
+                default_probability,
+                ml_explanation,
+                analyst_explanation,
 
-            decision,
-            decision_reason,
-            decision_trace
+                decision,
+                decision_reason,
+                decision_trace
+            )
+            VALUES (
+                ?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, ?
+            )
+            """,
+            (
+                profile.monthly_income,
+                profile.existing_obligations,
+                profile.loan_amount,
+                profile.annual_interest_rate,
+                profile.tenure_years,
+
+                profile.credit_score,
+                profile.employment_years,
+                profile.previous_defaults,
+
+                result.foir,
+                result.emi,
+                result.total_obligations,
+                result.remaining_income,
+                result.risk_level,
+
+                result.default_probability,
+                json.dumps(result.ml_explanation),
+                result.analyst_explanation,
+
+                lending_decision.decision,
+                lending_decision.reason,
+                serialize_decision_trace(decision_trace),
+            ),
         )
-        VALUES (
-            ?, ?, ?, ?, ?,
-            ?, ?, ?,
-            ?, ?, ?, ?, ?,
-            ?, ?, ?,
-            ?, ?, ?
-        )
-        """,
-        (
-            profile.monthly_income,
-            profile.existing_obligations,
-            profile.loan_amount,
-            profile.annual_interest_rate,
-            profile.tenure_years,
 
-            profile.credit_score,
-            profile.employment_years,
-            profile.previous_defaults,
+        application_id = cursor.lastrowid
 
-            result.foir,
-            result.emi,
-            result.total_obligations,
-            result.remaining_income,
-            result.risk_level,
+        connection.commit()
 
-            result.default_probability,
-            json.dumps(result.ml_explanation),
-            result.analyst_explanation,
+        return application_id
 
-            lending_decision.decision,
-            lending_decision.reason,
-            serialize_decision_trace(decision_trace),
-        ),
-    )
+    except Exception:
+        connection.rollback()
+        raise
 
-    application_id = cursor.lastrowid
-
-    connection.commit()
-
-    if owns_connection:
-        connection.close()
-
-    return application_id
+    finally:
+        if owns_connection:
+            connection.close()
 
 
 def get_credit_application(

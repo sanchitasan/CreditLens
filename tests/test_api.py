@@ -80,7 +80,10 @@ class FakeOrchestrator:
             decision_trace=decision_trace,
         )
 
-client = TestClient(app)
+client = TestClient(
+    app,
+    raise_server_exceptions=False,
+)
 
 def test_list_applications():
 
@@ -374,3 +377,245 @@ def test_get_application_returns_persisted_decision_trace(
         trace["analyst_explanation"]
         == "Applicant has low credit risk."
     )
+
+def test_unexpected_error_returns_500(monkeypatch):
+    def failing_process_credit_application(
+        profile,
+        connection=None,
+    ):
+        raise RuntimeError(
+            "unexpected internal failure"
+        )
+
+    monkeypatch.setattr(
+        "app.api.main.process_credit_application",
+        failing_process_credit_application,
+    )
+
+    payload = {
+        "monthly_income": 80000,
+        "existing_obligations": 20000,
+        "loan_amount": 500000,
+        "annual_interest_rate": 12,
+        "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
+    }
+
+    response = client.post(
+        "/applications",
+        json=payload,
+    )
+
+    assert response.status_code == 500
+
+    assert response.json() == {
+        "error": "internal_server_error",
+        "message": (
+            "An unexpected error occurred "
+            "while processing the request."
+        ),
+    }
+
+def test_list_applications_filters_by_risk_level(monkeypatch):
+
+    monkeypatch.setattr(
+        "app.services.application_service.create_creditlens_orchestrator",
+        lambda: FakeOrchestrator(),
+    )
+
+    payload = {
+        "monthly_income": 80000,
+        "existing_obligations": 20000,
+        "loan_amount": 500000,
+        "annual_interest_rate": 12,
+        "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
+    }
+
+    create_response = client.post(
+        "/applications",
+        json=payload,
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/applications?risk_level=LOW"
+    )
+
+    assert response.status_code == 200
+
+    applications = response.json()
+
+    assert isinstance(applications, list)
+
+    for application in applications:
+        assert application["risk_level"] == "LOW"
+
+
+def test_list_applications_filters_by_decision(monkeypatch):
+
+    monkeypatch.setattr(
+        "app.services.application_service.create_creditlens_orchestrator",
+        lambda: FakeOrchestrator(),
+    )
+
+    payload = {
+        "monthly_income": 80000,
+        "existing_obligations": 20000,
+        "loan_amount": 500000,
+        "annual_interest_rate": 12,
+        "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
+    }
+
+    create_response = client.post(
+        "/applications",
+        json=payload,
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/applications?decision=APPROVE"
+    )
+
+    assert response.status_code == 200
+
+    applications = response.json()
+
+    assert isinstance(applications, list)
+
+    for application in applications:
+        assert application["decision"] == "APPROVE"
+
+
+def test_list_applications_pagination(monkeypatch):
+
+    monkeypatch.setattr(
+        "app.services.application_service.create_creditlens_orchestrator",
+        lambda: FakeOrchestrator(),
+    )
+
+    payload = {
+        "monthly_income": 80000,
+        "existing_obligations": 20000,
+        "loan_amount": 500000,
+        "annual_interest_rate": 12,
+        "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
+    }
+
+    # Create multiple applications.
+    for _ in range(3):
+        response = client.post(
+            "/applications",
+            json=payload,
+        )
+
+        assert response.status_code == 201
+
+    response = client.get(
+        "/applications?skip=0&limit=2"
+    )
+
+    assert response.status_code == 200
+
+    applications = response.json()
+
+    assert isinstance(applications, list)
+
+    assert len(applications) <= 2
+
+
+def test_list_applications_rejects_negative_skip():
+
+    response = client.get(
+        "/applications?skip=-1"
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_applications_rejects_excessive_limit():
+
+    response = client.get(
+        "/applications?limit=101"
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_applications_rejects_invalid_risk_level():
+
+    response = client.get(
+        "/applications?risk_level=INVALID"
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_applications_rejects_invalid_decision():
+
+    response = client.get(
+        "/applications?decision=INVALID"
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_application_response_contains_complete_assessment(
+    monkeypatch,
+):
+
+    monkeypatch.setattr(
+        "app.services.application_service.create_creditlens_orchestrator",
+        lambda: FakeOrchestrator(),
+    )
+
+    payload = {
+        "monthly_income": 80000,
+        "existing_obligations": 20000,
+        "loan_amount": 500000,
+        "annual_interest_rate": 12,
+        "tenure_years": 5,
+        "credit_score": 750,
+        "employment_years": 4,
+        "previous_defaults": 0,
+    }
+
+    response = client.post(
+        "/applications",
+        json=payload,
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assessment = data["credit_assessment"]
+
+    assert assessment["foir"] == 25.0
+    assert assessment["emi"] == 11122.22
+    assert assessment["total_obligations"] == 31122.22
+    assert assessment["remaining_income"] == 48877.78
+    assert assessment["risk_level"] == "LOW"
+    assert assessment["default_probability"] == 0.03
+
+    assert assessment["ml_explanation"] == [
+        {
+            "feature": "credit_score",
+            "contribution": -3.9,
+            "direction": "reduces default risk",
+        }
+    ]
+
+

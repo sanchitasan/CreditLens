@@ -481,3 +481,68 @@ def test_get_credit_application_returns_decision_trace(
         retrieved_trace["analyst_explanation"]
         == "Applicant has low risk."
     )
+
+def test_save_credit_application_rolls_back_on_database_error(
+    tmp_path,
+):
+    """
+    Verify that a failed application insert
+    rolls back the database transaction.
+    """
+
+    test_database = (
+        tmp_path / "test_creditlens.db"
+    )
+
+    create_test_database(test_database)
+
+    connection = sqlite3.connect(test_database)
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        CREATE TRIGGER fail_credit_application_insert
+        BEFORE INSERT ON credit_applications
+        BEGIN
+            SELECT RAISE(
+                ABORT,
+                'forced database failure'
+            );
+        END;
+        """
+    )
+
+    connection.commit()
+
+    profile = create_profile()
+    result = create_decision()
+    lending_decision = create_lending_decision()
+
+    try:
+        save_credit_application(
+            profile=profile,
+            result=result,
+            lending_decision=lending_decision,
+            connection=connection,
+        )
+
+        assert False, (
+            "Expected database insert to fail"
+        )
+
+    except sqlite3.DatabaseError as error:
+        assert "forced database failure" in str(error)
+
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM credit_applications
+        """
+    )
+
+    application_count = cursor.fetchone()[0]
+
+    connection.close()
+
+    assert application_count == 0

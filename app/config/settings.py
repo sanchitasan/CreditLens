@@ -1,6 +1,6 @@
-import os
 from dataclasses import dataclass
 from pathlib import Path
+import os
 
 from dotenv import load_dotenv
 
@@ -14,71 +14,54 @@ load_dotenv(PROJECT_ROOT / ".env")
 class Settings:
     """
     Central configuration for the local CreditLens application.
-
-    Configuration is loaded from environment variables when provided,
-    otherwise sensible local defaults are used.
     """
 
-    # -------------------------
-    # Application
-    # -------------------------
+    app_name: str
+    gemini_api_key: str | None
+    gemini_model: str
+    database_path: Path
+    qdrant_path: Path
+    qdrant_collection: str
+    qdrant_vector_size: int
+    embedding_model: str
 
-    app_name: str = os.getenv(
-        "CREDITLENS_APP_NAME",
-        "CreditLens",
-    )
-
-    # -------------------------
-    # Gemini / LLM
-    # -------------------------
-
-    gemini_api_key: str | None = os.getenv(
-        "GEMINI_API_KEY"
-    )
-
-    gemini_model: str = os.getenv(
-        "GEMINI_MODEL",
-        "gemini-3.6-flash",
-    )
-
-    # -------------------------
-    # SQLite
-    # -------------------------
-
-    database_path: Path = PROJECT_ROOT / os.getenv(
-        "CREDITLENS_DATABASE_PATH",
-        "data/creditlens.db",
-    )
-
-    # -------------------------
-    # Qdrant
-    # -------------------------
-
-    qdrant_path: Path = PROJECT_ROOT / os.getenv(
-        "CREDITLENS_QDRANT_PATH",
-        "data/qdrant",
-    )
-
-    qdrant_collection: str = os.getenv(
-        "QDRANT_COLLECTION",
-        "credit_policy",
-    )
-
-    qdrant_vector_size: int = int(
-        os.getenv(
-            "QDRANT_VECTOR_SIZE",
-            "384",
+    @classmethod
+    def from_environment(cls):
+        return cls(
+            app_name=os.getenv(
+                "CREDITLENS_APP_NAME",
+                "CreditLens",
+            ),
+            gemini_api_key=os.getenv(
+                "GEMINI_API_KEY"
+            ),
+            gemini_model=os.getenv(
+                "GEMINI_MODEL",
+                "gemini-3.6-flash",
+            ),
+            database_path=PROJECT_ROOT / os.getenv(
+                "CREDITLENS_DATABASE_PATH",
+                "data/creditlens.db",
+            ),
+            qdrant_path=PROJECT_ROOT / os.getenv(
+                "CREDITLENS_QDRANT_PATH",
+                "data/qdrant",
+            ),
+            qdrant_collection=os.getenv(
+                "QDRANT_COLLECTION",
+                "credit_policy",
+            ),
+            qdrant_vector_size=int(
+                os.getenv(
+                    "QDRANT_VECTOR_SIZE",
+                    "384",
+                )
+            ),
+            embedding_model=os.getenv(
+                "EMBEDDING_MODEL",
+                "all-MiniLM-L6-v2",
+            ),
         )
-    )
-
-    # -------------------------
-    # Embeddings
-    # -------------------------
-
-    embedding_model: str = os.getenv(
-        "EMBEDDING_MODEL",
-        "all-MiniLM-L6-v2",
-    )
 
 
-settings = Settings()
+settings = Settings.from_environment()

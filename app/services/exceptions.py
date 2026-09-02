@@ -1,6 +1,12 @@
-class CreditApplicationError(Exception):
+class CreditLensException(Exception):
     """
-    Base exception for credit application failures.
+    Base exception for expected CreditLens application errors.
+    """
+
+
+class CreditApplicationError(CreditLensException):
+    """
+    Raised when a credit application cannot be processed.
     """
 
     def __init__(self, message: str):
@@ -8,12 +14,11 @@ class CreditApplicationError(Exception):
 
         super().__init__(message)
 
-class CreditLensException(Exception):
-    """Base exception for CreditLens."""
-
 
 class ApplicationNotFoundError(CreditLensException):
-    """Raised when a credit application does not exist."""
+    """
+    Raised when a credit application does not exist.
+    """
 
     def __init__(self, application_id: int):
         self.application_id = application_id
@@ -24,7 +29,9 @@ class ApplicationNotFoundError(CreditLensException):
 
 
 class InvalidApplicationError(CreditLensException):
-    """Raised when an application cannot be processed."""
+    """
+    Raised when an application is invalid.
+    """
 
     def __init__(self, message: str):
         super().__init__(message)

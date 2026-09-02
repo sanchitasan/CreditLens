@@ -1,42 +1,33 @@
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
 from google import genai
 
+from app.config.settings import Settings
 from app.llm.llm_client import LLMClient
-
-
-# Find the CreditLens project root.
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-# Load environment variables from .env
-load_dotenv(PROJECT_ROOT / ".env")
 
 
 class GeminiClient(LLMClient):
     """
     LLM client using Google's Gemini API.
-
-    The Gemini API key is loaded from the
-    project's .env file.
     """
 
     def __init__(
         self,
-        model: str = "gemini-3.6-flash",
+        model: str | None = None,
     ):
-        api_key = os.getenv("GEMINI_API_KEY")
+        current_settings = Settings.from_environment()
 
-        if not api_key:
+        if not current_settings.gemini_api_key:
             raise ValueError(
                 "GEMINI_API_KEY is not configured."
             )
 
-        self.model = model
+        self.model = (
+            model
+            if model is not None
+            else current_settings.gemini_model
+        )
 
         self.client = genai.Client(
-            api_key=api_key
+            api_key=current_settings.gemini_api_key
         )
 
     def generate(
