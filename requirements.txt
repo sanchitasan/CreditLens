@@ -16,3 +16,5 @@ google-genai
 python-dotenv
 
 qudrant-client
+streamlit
+httpx
