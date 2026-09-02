@@ -1,3 +1,5 @@
+import pandas as pd
+
 from app.ml.model_persistence import load_model
 from app.ml.preprocessing import FEATURES
 
@@ -10,8 +12,13 @@ def predict_default_probability(features):
 
     model = load_model()
 
+    feature_data = pd.DataFrame(
+        [features],
+        columns=FEATURES,
+    )
+
     probabilities = model.predict_probability(
-        [features]
+        feature_data
     )
 
     return float(probabilities[0])

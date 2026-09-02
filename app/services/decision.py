@@ -18,6 +18,7 @@ class CreditDecision:
 class LendingDecision:
     decision: str
     reason: str
+    risk_level: str
 
 def make_credit_decision(risk_level: str,default_probability=0.0, ml_explanation=None) -> LendingDecision:
 
@@ -25,18 +26,21 @@ def make_credit_decision(risk_level: str,default_probability=0.0, ml_explanation
         return LendingDecision(
             decision="APPROVE",
             reason="Applicant has low credit risk.",
+            risk_level=risk_level
         )
 
     if risk_level == "MEDIUM":
         return LendingDecision(
             decision="MANUAL_REVIEW",
             reason="Applicant requires additional review.",
+            risk_level=risk_level,
         )
 
     if risk_level == "HIGH":
         return LendingDecision(
             decision="REJECT",
             reason="Applicant has high credit risk.",
+            risk_level=risk_level,
         )
 
     raise ValueError(f"Unknown risk level: {risk_level}")

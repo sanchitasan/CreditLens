@@ -123,6 +123,7 @@ def test_orchestrator_coordinates_all_agents(
     expected_decision = SimpleNamespace(
         decision="APPROVE",
         reason="Applicant has low credit risk.",
+        risk_level="LOW",
     )
 
     received_decision_arguments = {}
@@ -211,6 +212,8 @@ def test_orchestrator_coordinates_all_agents(
         result.lending_decision.decision
         == "APPROVE"
     )
+    assert result.rule_risk_level == "LOW"
+    assert result.final_risk_level == "LOW"
 
 
 def test_orchestrator_returns_complete_package(
@@ -228,6 +231,7 @@ def test_orchestrator_returns_complete_package(
             SimpleNamespace(
                 decision="APPROVE",
                 reason="Applicant has low credit risk.",
+                risk_level="LOW",
             ),
     )
 
@@ -262,6 +266,7 @@ def test_orchestrator_passes_complete_package_to_final_analyst(
         lambda profile, default_probability: SimpleNamespace(
             decision="APPROVE",
             reason="Applicant has low credit risk.",
+            risk_level="LOW",
         ),
     )
 
@@ -286,7 +291,8 @@ def test_orchestrator_passes_complete_package_to_final_analyst(
     assert package.lending_decision is not None
 
     assert package.lending_decision.decision == "APPROVE"
-
+    assert package.rule_risk_level == "LOW"
+    assert package.final_risk_level == "LOW"
     assert result.analyst_explanation == (
         "Final analyst explanation."
     )

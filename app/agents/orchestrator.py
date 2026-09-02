@@ -72,6 +72,10 @@ class CreditLensOrchestrator:
             risk_analysis=risk_analysis,
             policy_analysis=policy_analysis,
             lending_decision=lending_decision,
+            rule_risk_level=financial_analysis.risk_level,
+            final_risk_level=lending_decision.risk_level,
+
+
         )
 
         final_analysis = self.final_analyst_agent.analyze(

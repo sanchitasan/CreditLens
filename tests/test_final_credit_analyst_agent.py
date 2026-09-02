@@ -9,12 +9,16 @@ from app.finance.profile import FinancialProfile
 
 
 class FakeAnalyst:
-    def __init__(self):
+    def __init__(
+        self,
+        response="Final credit assessment generated.",
+    ):
         self.received_input = None
+        self.response = response
 
     def analyze(self, analyst_input):
         self.received_input = analyst_input
-        return "Final credit assessment generated."
+        return self.response
 
 
 def build_profile():
@@ -60,6 +64,7 @@ def build_package():
     lending_decision = SimpleNamespace(
         decision="APPROVE",
         reason="Applicant has low credit risk.",
+        risk_level="LOW",
     )
 
     return CreditAssessmentPackage(
@@ -67,6 +72,8 @@ def build_package():
         risk_analysis=risk_analysis,
         policy_analysis=policy_analysis,
         lending_decision=lending_decision,
+        rule_risk_level=financial_analysis.risk_level,
+        final_risk_level=lending_decision.risk_level,
     )
 
 
@@ -152,4 +159,37 @@ def test_final_credit_analyst_does_not_change_decision():
     assert package.lending_decision.decision == "APPROVE"
     assert result.analyst_explanation == (
         "Final credit assessment generated."
+    )
+
+def test_final_credit_analyst_cannot_override_lending_decision():
+
+    fake_analyst = FakeAnalyst(
+        response=(
+            "The applicant should be REJECTED "
+            "despite the supplied approval decision."
+        )
+    )
+
+    agent = FinalCreditAnalystAgent(
+        analyst=fake_analyst
+    )
+
+    profile = build_profile()
+    package = build_package()
+
+    original_decision = package.lending_decision.decision
+
+    result = agent.analyze(
+        FinalCreditAnalystInput(
+            profile=profile,
+            assessment_package=package,
+        )
+    )
+
+    assert package.lending_decision.decision == original_decision
+    assert package.lending_decision.decision == "APPROVE"
+
+    assert result.analyst_explanation == (
+        "The applicant should be REJECTED "
+        "despite the supplied approval decision."
     )

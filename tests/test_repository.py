@@ -101,6 +101,7 @@ def create_lending_decision():
     return LendingDecision(
         decision="APPROVE",
         reason="Applicant has low credit risk.",
+        risk_level="LOW",
     )
 
 

@@ -146,9 +146,14 @@ def test_credit_assessment_package_contract():
         risk_analysis=risk,
         policy_analysis=policy,
         lending_decision=decision,
+        rule_risk_level="LOW",
+        final_risk_level="LOW",
+
     )
 
     assert package.financial_analysis == financial
     assert package.risk_analysis == risk
     assert package.policy_analysis == policy
     assert package.lending_decision == decision
+    assert package.rule_risk_level == "LOW"
+    assert package.final_risk_level == "LOW"
