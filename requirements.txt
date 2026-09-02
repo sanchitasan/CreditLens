@@ -14,3 +14,5 @@ joblib
 
 google-genai
 python-dotenv
+
+qudrant-client

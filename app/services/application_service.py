@@ -37,9 +37,35 @@ from app.llm.gemini_client import (
     GeminiClient,
 )
 
+
+from app.rag.retriever import (
+    RAGRetriever,
+)
+
+from app.rag.context import (
+    RAGContextBuilder,
+)
+
+from app.rag.embeddings import (
+    EmbeddingProvider,
+)
+
+from app.rag.vector_store import (
+    QdrantVectorStore,
+)
+
+from app.rag.query_builder import RAGQueryBuilder
+from app.rag.factor_queries import RAGFactorQueryBuilder
+from app.rag.factor_retriever import RAGFactorRetriever
+
 def process_credit_application(
     profile: FinancialProfile,
     connection=None,
+    rag_retriever=None,
+    rag_context_builder=None,
+    rag_query_builder=None,
+    rag_factor_query_builder=None,
+    rag_factor_retriever=None,
 ):
     """
     Complete credit application workflow.
@@ -107,6 +133,53 @@ def process_credit_application(
         assessment.default_probability,
     )
 
+    if rag_retriever is None:
+        rag_retriever = RAGRetriever(
+            embedding_provider=EmbeddingProvider(),
+            vector_store=QdrantVectorStore(
+                path="data/qdrant",
+                collection_name="credit_policy",
+                vector_size=384,
+            ),
+        )
+
+    if rag_context_builder is None:
+        rag_context_builder = RAGContextBuilder()
+
+    if rag_factor_query_builder is None:
+        rag_factor_query_builder = RAGFactorQueryBuilder()
+
+    if rag_factor_retriever is None:
+
+        if rag_retriever is None:
+            rag_retriever = RAGRetriever(
+                embedding_provider=EmbeddingProvider(),
+                vector_store=QdrantVectorStore(
+                    path="data/qdrant",
+                    collection_name="credit_policy",
+                    vector_size=384,
+                ),
+            )
+
+        rag_factor_retriever = RAGFactorRetriever(
+            retriever=rag_retriever,
+        )
+
+    policy_queries = rag_factor_query_builder.build(
+        foir=assessment.foir,
+        credit_score=profile.credit_score,
+        previous_defaults=profile.previous_defaults,
+        default_probability=assessment.default_probability,
+        lending_decision=lending_decision.decision,
+    )
+
+    policy_results = rag_factor_retriever.retrieve(
+        queries=policy_queries,
+        limit_per_query=1,
+    )
+
+    policy_context = rag_context_builder.build(policy_results)
+
     analyst_input = CreditAnalystInput(
         monthly_income=profile.monthly_income,
         existing_obligations=profile.existing_obligations,
@@ -127,6 +200,8 @@ def process_credit_application(
 
         lending_decision=lending_decision.decision,
         decision_reason=lending_decision.reason,
+
+        policy_context=policy_context,
     )
 
     analyst = CreditAnalyst(

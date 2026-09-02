@@ -52,6 +52,9 @@ def test_credit_analyst_uses_llm_client():
         ],
         lending_decision="APPROVE",
         decision_reason="Applicant has low credit risk.",
+        policy_context=(
+            "FOIR below 30% represents low financial obligation risk."
+        ),
     )
 
     result = analyst.analyze(application)

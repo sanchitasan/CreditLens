@@ -36,6 +36,8 @@ class CreditAnalystInput:
     lending_decision: str
     decision_reason: str
 
+    policy_context: str
+
 
 def build_credit_analyst_prompt(
     application: CreditAnalystInput,
@@ -69,6 +71,11 @@ IMPORTANT RULES:
 8. Explain the assessment in professional lending language.
 9. Do not make unsupported claims.
 10. Mention uncertainty when appropriate.
+11. Use the supplied POLICY CONTEXT as the policy reference when explaining applicable credit-risk guidelines.
+12. Do not treat retrieved policy context as applicant data.
+13. Do not infer policy thresholds or rules that are not explicitly present in the supplied POLICY CONTEXT.
+14. When explaining the decision, connect relevant applicant factors to the applicable policy context.
+15. The lending decision and decision reason supplied by CreditLens remain authoritative.
 
 APPLICANT INFORMATION
 
@@ -104,6 +111,10 @@ Decision: {application.lending_decision}
 Decision reason:
 {application.decision_reason}
 
+POLICY CONTEXT
+
+{application.policy_context}
+
 TASK
 
 Provide a concise credit analyst assessment containing:
@@ -112,11 +123,22 @@ Provide a concise credit analyst assessment containing:
 2. Positive factors
 3. Risk factors
 4. Explanation of the ML risk signal
-5. Decision context
-6. Important limitations or uncertainty
+5. Policy-grounded reasoning
+6. Decision context
+7. Important limitations or uncertainty
+
+For the policy-grounded reasoning:
+
+- Use only the supplied POLICY CONTEXT.
+- Identify the relevant policy guidance for the applicant's
+  financial and credit-risk factors.
+- Explain how the supplied assessment relates to that policy.
+- Do not invent missing policy thresholds or rules.
+- Do not change, reinterpret, or override the supplied
+  lending decision.
 
 Do not introduce any information that is not present
-in the supplied application data.
+in the supplied application data or POLICY CONTEXT.
 """.strip()
 
 
