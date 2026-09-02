@@ -102,13 +102,14 @@ def create_application(
             "risk_level": assessment.risk_level,
             "default_probability": assessment.default_probability,
             "ml_explanation": assessment.ml_explanation,
-            "analyst_explanation": assessment.analyst_explanation,
+
         },
 
         "lending_decision": {
             "decision": lending_decision.decision,
             "reason": lending_decision.reason,
         },
+        "analyst_explanation": assessment.analyst_explanation,
     }
 
 
@@ -157,6 +158,8 @@ def get_application(
 
         decision=application["decision"],
         decision_reason=application["decision_reason"],
+
+        decision_trace=application["decision_trace"],
     )
 
 
@@ -222,6 +225,7 @@ def get_applications(
 
             decision=application["decision"],
             decision_reason=application["decision_reason"],
+            decision_trace=application["decision_trace"],
         )
         for application in applications
     ]

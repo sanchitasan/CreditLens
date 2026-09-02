@@ -1,25 +1,97 @@
+from types import SimpleNamespace
+
+import app.services.application_service as application_service_module
+
 from app.finance.profile import FinancialProfile
-from app.services.application_service import process_credit_application
+
+from app.services.application_service import (
+    process_credit_application,
+)
+from app.audit.decision_trace import DecisionTrace
+from app.agents.financial_analyst_agent import FinancialAnalysis
+from app.agents.risk_analyst_agent import RiskAnalysis
+from app.agents.policy_analyst_agent import (
+    PolicyAnalysis,
+)
+from app.services.decision import LendingDecision
+
+class FakeOrchestrator:
+
+    def assess(self, profile):
+
+        financial_analysis = FinancialAnalysis(
+            foir=25.0,
+            emi=11122.22,
+            total_obligations=31122.22,
+            remaining_income=48877.78,
+            risk_level="LOW",
+            risk_reasons=[
+                "Applicant passes basic financial rules"
+            ],
+        )
+
+        risk_analysis = RiskAnalysis(
+            default_probability=0.20,
+            ml_explanation=[
+                {
+                    "feature": "credit_score",
+                    "contribution": -3.0,
+                    "direction": "reduces default risk",
+                }
+            ],
+        )
+
+        policy_analysis = PolicyAnalysis(
+            policy_context="FOIR policy guidance."
+        )
+
+        lending_decision = LendingDecision(
+            decision="APPROVE",
+            reason="Applicant has low credit risk.",
+            risk_level="LOW",
+        )
+
+        decision_trace = DecisionTrace(
+            applicant_data={
+                "monthly_income": profile.monthly_income,
+                "existing_obligations": profile.existing_obligations,
+                "loan_amount": profile.loan_amount,
+                "annual_interest_rate": profile.annual_interest_rate,
+                "tenure_years": profile.tenure_years,
+            },
+            financial_analysis=financial_analysis,
+            risk_analysis=risk_analysis,
+            policy_context=policy_analysis.policy_context,
+            rule_risk_level="LOW",
+            final_risk_level="LOW",
+            lending_decision=lending_decision,
+            analyst_explanation="Applicant has low credit risk.",
+        )
+
+        return SimpleNamespace(
+            financial_analysis=financial_analysis,
+            risk_analysis=risk_analysis,
+            policy_analysis=SimpleNamespace(
+                policy_context="Policy context."
+            ),
+            lending_decision=lending_decision,
+            rule_risk_level="LOW",
+            final_risk_level="LOW",
+            analyst_explanation="Final analyst explanation.",
+            decision_trace=decision_trace,
+        )
 
 
-def test_application_service_uses_ml_prediction(monkeypatch):
+def test_application_service_uses_ml_prediction(
+    monkeypatch,
+):
+
+    fake_orchestrator = FakeOrchestrator()
 
     monkeypatch.setattr(
-        "app.services.application_service.predict_default_probability",
-        lambda features: 0.20,
-    )
-
-    class FakeCreditAnalyst:
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def analyze(self, assessment):
-            return "Applicant has low credit risk."
-
-    monkeypatch.setattr(
-        "app.services.application_service.CreditAnalyst",
-        FakeCreditAnalyst,
+        application_service_module,
+        "create_creditlens_orchestrator",
+        lambda: fake_orchestrator,
     )
 
     profile = FinancialProfile(
@@ -33,9 +105,22 @@ def test_application_service_uses_ml_prediction(monkeypatch):
         previous_defaults=0,
     )
 
-    application_id, assessment, lending_decision = (
-        process_credit_application(profile)
-    )
+    (
+        application_id,
+        assessment,
+        lending_decision,
+    ) = process_credit_application(profile)
 
     assert application_id > 0
+
     assert assessment.default_probability == 0.20
+
+    assert assessment.ml_explanation == [
+        {
+            "feature": "credit_score",
+            "contribution": -3.0,
+            "direction": "reduces default risk",
+        }
+    ]
+
+    assert lending_decision.decision == "APPROVE"

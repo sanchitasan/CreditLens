@@ -10,3 +10,4 @@ class CreditAssessmentPackage:
     rule_risk_level: str
     final_risk_level: str
     analyst_explanation: str | None = None
+    decision_trace: object | None = None

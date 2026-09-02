@@ -296,3 +296,32 @@ def test_orchestrator_passes_complete_package_to_final_analyst(
     assert result.analyst_explanation == (
         "Final analyst explanation."
     )
+    assert result.decision_trace is not None
+
+    trace = result.decision_trace
+
+    assert trace.applicant_data["monthly_income"] == 80000
+
+    assert trace.financial_analysis == (
+        result.financial_analysis
+    )
+
+    assert trace.risk_analysis == (
+        result.risk_analysis
+    )
+
+    assert trace.policy_context == (
+        result.policy_analysis.policy_context
+    )
+
+    assert trace.rule_risk_level == "LOW"
+
+    assert trace.final_risk_level == "LOW"
+
+    assert trace.lending_decision == (
+        result.lending_decision
+    )
+
+    assert trace.analyst_explanation == (
+        "Final analyst explanation."
+    )

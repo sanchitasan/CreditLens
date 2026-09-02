@@ -1,86 +1,124 @@
+from types import SimpleNamespace
+
 from app.finance.profile import FinancialProfile
 
 from app.services.application_service import (
     process_credit_application,
 )
 
+import app.services.application_service as application_service_module
 
-class FakeRAGResult:
+from app.agents.financial_analyst_agent import (
+    FinancialAnalysis,
+)
 
-    def __init__(self, content):
-        self.payload = {
-            "content": content
-        }
+from app.agents.risk_analyst_agent import (
+    RiskAnalysis,
+)
 
+from app.agents.policy_analyst_agent import (
+    PolicyAnalysis,
+)
+from app.audit.decision_trace import DecisionTrace
 
-class FakeFactorQueryBuilder:
+class FakeOrchestrator:
 
-    def __init__(self):
-        self.received_values = None
+    def assess(self, profile):
 
-    def build(
-        self,
-        foir,
-        credit_score,
-        previous_defaults,
-        default_probability,
-        lending_decision,
-    ):
-        self.received_values = {
-            "foir": foir,
-            "credit_score": credit_score,
-            "previous_defaults": previous_defaults,
-            "default_probability": default_probability,
-            "lending_decision": lending_decision,
-        }
+        financial_analysis = FinancialAnalysis(
+            foir=25.0,
+            emi=11122.22,
+            total_obligations=31122.22,
+            remaining_income=48877.78,
+            risk_level="LOW",
+            risk_reasons=[
+                "Applicant passes basic financial rules"
+            ],
+        )
 
-        return [
-            "FOIR policy",
-            "credit score policy",
-            "previous default policy",
-            "ML default probability policy",
-            "APPROVE lending decision policy",
-        ]
+        risk_analysis = RiskAnalysis(
+            default_probability=0.03,
+            ml_explanation=[
+                {
+                    "feature": "credit_score",
+                    "contribution": -3.9,
+                    "direction": "reduces default risk",
+                }
+            ],
+        )
 
+        policy_analysis = PolicyAnalysis(
+            policy_context="FOIR policy guidance."
+        )
 
-class FakeFactorRetriever:
+        lending_decision = SimpleNamespace(
+            decision="APPROVE",
+            reason="Applicant has low credit risk.",
 
-    def __init__(self):
-        self.received_queries = None
-        self.received_limit = None
+        )
+        decision_trace = DecisionTrace(
+            applicant_data={
+                "monthly_income": profile.monthly_income,
+                "existing_obligations": profile.existing_obligations,
+                "loan_amount": profile.loan_amount,
+                "annual_interest_rate": profile.annual_interest_rate,
+                "tenure_years": profile.tenure_years,
+            },
+            financial_analysis=financial_analysis,
+            risk_analysis=risk_analysis,
+            policy_context=policy_analysis.policy_context,
+            rule_risk_level="LOW",
+            final_risk_level="LOW",
+            lending_decision=lending_decision,
+            analyst_explanation=(
+                "Applicant has low credit risk."
+            ),
 
-    def retrieve(self, queries, limit_per_query=1):
-        self.received_queries = queries
-        self.received_limit = limit_per_query
+        )
 
-        return [
-            FakeRAGResult(
-                "FOIR below 30% is considered low financial obligation risk."
-            )
-        ]
-
-
-class FakeRAGContextBuilder:
-
-    def build(self, results):
-        return results[0].payload["content"]
+        return SimpleNamespace(
+            financial_analysis=financial_analysis,
+            risk_analysis=risk_analysis,
+            policy_analysis=policy_analysis,
+            lending_decision=lending_decision,
+            rule_risk_level="LOW",
+            final_risk_level="LOW",
+            analyst_explanation=(
+                "Applicant has low credit risk."
+            ),
+            decision_trace=decision_trace,
+        )
 
 
 def test_process_credit_application(monkeypatch):
 
-    class FakeCreditAnalyst:
-        received_application = None
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def analyze(self, assessment):
-            FakeCreditAnalyst.received_application = assessment
-            return "Applicant has low credit risk."
+    fake_orchestrator = FakeOrchestrator()
 
     monkeypatch.setattr(
-        "app.services.application_service.CreditAnalyst",
-        FakeCreditAnalyst,
+        application_service_module,
+        "create_creditlens_orchestrator",
+        lambda: fake_orchestrator,
+    )
+
+    saved_decision_trace = None
+
+    def fake_save_credit_application(
+        profile,
+        result,
+        lending_decision,
+        decision_trace=None,
+        connection=None,
+    ):
+        nonlocal saved_decision_trace
+
+        saved_decision_trace = decision_trace
+
+        return 1
+
+    monkeypatch.setattr(
+        application_service_module,
+        "save_credit_application",
+        fake_save_credit_application,
     )
 
     profile = FinancialProfile(
@@ -91,19 +129,11 @@ def test_process_credit_application(monkeypatch):
         tenure_years=5,
     )
 
-    rag_factor_query_builder = FakeFactorQueryBuilder()
-    rag_factor_retriever = FakeFactorRetriever()
-
     (
         application_id,
         assessment,
         lending_decision,
-    ) = process_credit_application(
-        profile,
-        rag_context_builder=FakeRAGContextBuilder(),
-        rag_factor_query_builder=rag_factor_query_builder,
-        rag_factor_retriever=rag_factor_retriever,
-    )
+    ) = process_credit_application(profile)
 
     assert application_id > 0
 
@@ -117,6 +147,12 @@ def test_process_credit_application(monkeypatch):
 
     assert assessment.risk_level == "LOW"
 
+    assert assessment.default_probability == 0.03
+
+    assert assessment.analyst_explanation == (
+        "Applicant has low credit risk."
+    )
+
     assert lending_decision.decision == "APPROVE"
 
     assert (
@@ -124,40 +160,14 @@ def test_process_credit_application(monkeypatch):
         == "Applicant has low credit risk."
     )
 
-    # Verify factor query builder received the final application values.
+    assert saved_decision_trace is not None
 
     assert (
-        rag_factor_query_builder.received_values["foir"]
-        == 25.0
+        saved_decision_trace.rule_risk_level
+        == "LOW"
     )
 
     assert (
-        rag_factor_query_builder.received_values["credit_score"]
-        == profile.credit_score
+        saved_decision_trace.final_risk_level
+        == "LOW"
     )
-
-    assert (
-        rag_factor_query_builder.received_values["previous_defaults"]
-        == profile.previous_defaults
-    )
-
-    assert (
-        rag_factor_query_builder.received_values["default_probability"]
-        == assessment.default_probability
-    )
-
-    assert (
-        rag_factor_query_builder.received_values["lending_decision"]
-        == lending_decision.decision
-    )
-
-    assert (
-            FakeCreditAnalyst.received_application.policy_context
-            == "FOIR below 30% is considered low financial obligation risk."
-    )
-
-    # Verify factor-level retrieval was actually called.
-
-    assert len(rag_factor_retriever.received_queries) == 5
-
-    assert rag_factor_retriever.received_limit == 1

@@ -18,6 +18,8 @@ from app.agents.risk_analyst_agent import (
 from app.finance.profile import FinancialProfile
 from app.tools.lending_decision_tool import lending_decision_tool
 
+from app.audit.trace_builder import build_decision_trace
+
 
 class CreditLensOrchestrator:
     """
@@ -87,6 +89,10 @@ class CreditLensOrchestrator:
 
         package.analyst_explanation = (
             final_analysis.analyst_explanation
+        )
+        package.decision_trace = build_decision_trace(
+            profile=profile,
+            package=package,
         )
 
         return package

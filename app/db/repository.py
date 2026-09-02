@@ -9,12 +9,60 @@ from app.services.decision import (
     LendingDecision,
 )
 
+from dataclasses import asdict, is_dataclass
+
+def serialize_decision_trace(decision_trace) -> str | None:
+    """
+    Serialize a DecisionTrace into JSON for database storage.
+    """
+
+    if decision_trace is None:
+        return None
+
+    if not is_dataclass(decision_trace):
+        raise TypeError(
+            "decision_trace must be a dataclass"
+        )
+
+    return json.dumps(
+        asdict(decision_trace)
+    )
+
+def deserialize_decision_trace(decision_trace):
+    """
+    Convert stored DecisionTrace JSON into a Python dictionary.
+    """
+
+    if not decision_trace:
+        return None
+
+    if isinstance(decision_trace, str):
+        return json.loads(decision_trace)
+
+    return decision_trace
+
+def deserialize_ml_explanation(value):
+    """
+    Convert stored ML explanation JSON into a list.
+    """
+
+    if not value:
+        return []
+
+    parsed = json.loads(value)
+
+    if parsed is None:
+        return []
+
+    return parsed
+
 
 def save_credit_application(
     profile: FinancialProfile,
 
     result,
     lending_decision: LendingDecision,
+    decision_trace=None,
     connection=None,
 ) -> int:
     """
@@ -28,6 +76,7 @@ def save_credit_application(
     """
 
     owns_connection = connection is None
+
 
     if connection is None:
         connection = get_connection()
@@ -58,14 +107,15 @@ def save_credit_application(
             analyst_explanation,
 
             decision,
-            decision_reason
+            decision_reason,
+            decision_trace
         )
         VALUES (
             ?, ?, ?, ?, ?,
             ?, ?, ?,
             ?, ?, ?, ?, ?,
             ?, ?, ?,
-            ?, ?
+            ?, ?, ?
         )
         """,
         (
@@ -91,6 +141,7 @@ def save_credit_application(
 
             lending_decision.decision,
             lending_decision.reason,
+            serialize_decision_trace(decision_trace),
         ),
     )
 
@@ -147,7 +198,8 @@ def get_credit_application(
             analyst_explanation,
 
             decision,
-            decision_reason
+            decision_reason,
+            decision_trace
 
         FROM credit_applications
 
@@ -166,12 +218,14 @@ def get_credit_application(
 
     application = dict(row)
 
-    if application["ml_explanation"]:
-        application["ml_explanation"] = json.loads(
-            application["ml_explanation"]
-        )
-    else:
-        application["ml_explanation"] = []
+    application["ml_explanation"] = deserialize_ml_explanation(
+        application["ml_explanation"]
+    )
+
+    application["decision_trace"] = deserialize_decision_trace(
+        application["decision_trace"]
+    )
+
 
     return application
 
@@ -247,12 +301,15 @@ def list_credit_applications(
     ]
 
     for application in applications:
-        if application["ml_explanation"]:
-            application["ml_explanation"] = json.loads(
-                application["ml_explanation"]
-            )
-        else:
-            application["ml_explanation"] = []
+        application["ml_explanation"] = deserialize_ml_explanation(
+            application["ml_explanation"]
+        )
+
+        application["decision_trace"] = deserialize_decision_trace(
+            application["decision_trace"]
+        )
+
+
 
     if close_connection:
         connection.close()

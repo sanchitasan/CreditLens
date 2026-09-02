@@ -14,7 +14,10 @@ from app.services.decision import (
     CreditDecision,
     LendingDecision,
 )
+import json
 
+from app.audit.decision_trace import DecisionTrace
+from app.db.database import get_connection, initialize_database
 
 def create_test_database(database_path):
     """
@@ -52,7 +55,9 @@ def create_test_database(database_path):
             analyst_explanation TEXT,
 
             decision TEXT,
-            decision_reason TEXT
+            decision_reason TEXT,
+            
+            decision_trace TEXT
         )
         """
     )
@@ -239,6 +244,79 @@ def test_get_nonexistent_application(
     assert application is None
 
 
+def test_save_credit_application_persists_decision_trace():
+
+    initialize_database()
+
+    connection = get_connection()
+
+    profile = FinancialProfile(
+        monthly_income=80000,
+        existing_obligations=20000,
+        loan_amount=500000,
+        annual_interest_rate=12,
+        tenure_years=5,
+        credit_score=780,
+        employment_years=5,
+        previous_defaults=0,
+    )
+
+    result = create_decision()
+
+    lending_decision = LendingDecision(
+        decision="APPROVE",
+        reason="Applicant has low credit risk.",
+        risk_level="LOW",
+    )
+
+    trace = DecisionTrace(
+        applicant_data={
+            "monthly_income": 80000,
+        },
+        financial_analysis=result,
+        risk_analysis={
+            "default_probability": 0.03,
+        },
+        policy_context="FOIR guidelines.",
+        rule_risk_level="LOW",
+        final_risk_level="LOW",
+        lending_decision=lending_decision,
+        analyst_explanation="Applicant has low risk.",
+    )
+
+    application_id = save_credit_application(
+        profile=profile,
+        result=result,
+        lending_decision=lending_decision,
+        decision_trace=trace,
+        connection=connection,
+    )
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT decision_trace
+        FROM credit_applications
+        WHERE id = ?
+        """,
+        (application_id,),
+    )
+
+    stored_trace = cursor.fetchone()[0]
+
+    connection.close()
+
+    assert stored_trace is not None
+
+    parsed_trace = json.loads(stored_trace)
+
+    assert parsed_trace["applicant_data"]["monthly_income"] == 80000
+    assert parsed_trace["rule_risk_level"] == "LOW"
+    assert parsed_trace["final_risk_level"] == "LOW"
+    assert parsed_trace["policy_context"] == "FOIR guidelines."
+
+
 def test_list_credit_applications(
     tmp_path,
     monkeypatch,
@@ -318,4 +396,88 @@ def test_list_credit_applications(
     assert (
         applications[0]["decision_reason"]
         == "Applicant has low credit risk."
+    )
+
+def test_get_credit_application_returns_decision_trace(
+    tmp_path,
+    monkeypatch,
+):
+    """
+    Verify that a persisted DecisionTrace
+    can be retrieved as structured data.
+    """
+
+    test_database = (
+        tmp_path / "test_creditlens.db"
+    )
+
+    create_test_database(test_database)
+
+    monkeypatch.setattr(
+        repository,
+        "get_connection",
+        lambda: sqlite3.connect(test_database),
+    )
+
+    profile = create_profile()
+
+    result = create_decision()
+
+    lending_decision = create_lending_decision()
+
+    trace = DecisionTrace(
+        applicant_data={
+            "monthly_income": 80000,
+        },
+        financial_analysis=result,
+        risk_analysis={
+            "default_probability": 0.03,
+        },
+        policy_context="FOIR guidelines.",
+        rule_risk_level="LOW",
+        final_risk_level="LOW",
+        lending_decision=lending_decision,
+        analyst_explanation="Applicant has low risk.",
+    )
+
+    application_id = save_credit_application(
+        profile=profile,
+        result=result,
+        lending_decision=lending_decision,
+        decision_trace=trace,
+    )
+
+    application = get_credit_application(
+        application_id
+    )
+
+    assert application is not None
+
+    assert application["decision_trace"] is not None
+
+    retrieved_trace = application["decision_trace"]
+
+    assert (
+        retrieved_trace["applicant_data"]["monthly_income"]
+        == 80000
+    )
+
+    assert (
+        retrieved_trace["rule_risk_level"]
+        == "LOW"
+    )
+
+    assert (
+        retrieved_trace["final_risk_level"]
+        == "LOW"
+    )
+
+    assert (
+        retrieved_trace["policy_context"]
+        == "FOIR guidelines."
+    )
+
+    assert (
+        retrieved_trace["analyst_explanation"]
+        == "Applicant has low risk."
     )

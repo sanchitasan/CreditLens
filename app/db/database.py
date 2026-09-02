@@ -59,7 +59,8 @@ def initialize_database():
             analyst_explanation TEXT,
 
             decision TEXT,
-            decision_reason TEXT
+            decision_reason TEXT,
+            decision_trace TEXT
         )
         """
     )
@@ -153,6 +154,15 @@ def initialize_database():
             """
             ALTER TABLE credit_applications
             ADD COLUMN decision_reason TEXT
+            """
+        )
+
+    # Migration: add decision trace.
+    if "decision_trace" not in columns:
+        cursor.execute(
+            """
+            ALTER TABLE credit_applications
+            ADD COLUMN decision_trace TEXT
             """
         )
 

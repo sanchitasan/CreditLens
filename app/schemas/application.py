@@ -113,3 +113,23 @@ class LoanApplicationResponse(BaseModel):
     # Lending decision
     decision: str | None = None
     decision_reason: str | None = None
+
+    decision_trace: DecisionTraceResponse | None = None
+
+class DecisionTraceResponse(BaseModel):
+
+    applicant_data: dict
+
+    financial_analysis: dict
+
+    risk_analysis: dict
+
+    policy_context: str
+
+    rule_risk_level: str
+
+    final_risk_level: str
+
+    lending_decision: dict
+
+    analyst_explanation: str | None = None
